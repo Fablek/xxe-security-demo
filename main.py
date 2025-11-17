@@ -1,16 +1,19 @@
-# This is a sample Python script.
+"""
+Test setup
+"""
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+from flask import Flask
 
+app = Flask(__name__)
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
+@app.route('/')
+def hello():
+    return """
+    <h1>✅ Flask działa!</h1>
+    <p>Środowisko jest gotowe do pracy nad XXE Security Demo</p>
+    """
 
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    print("🚀 Starting Flask test server...")
+    print("📍 Visit: http://127.0.0.1:5000")
+    app.run(debug=True)
