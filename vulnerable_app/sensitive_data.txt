@@ -1,0 +1,20 @@
+========================================
+CONFIDENTIAL - INTERNAL USE ONLY
+========================================
+
+Database Credentials:
+Username: admin
+Password: SuperSecret123!
+
+API Keys:
+Production: sk_prod_xxxxxxxxxxxx
+Development: sk_dev_yyyyyyyyyyyy
+
+Internal Server IPs:
+Database: 192.168.1.100
+Cache: 192.168.1.101
+Admin Panel: 192.168.1.200
+
+========================================
+DO NOT SHARE THIS FILE
+========================================
