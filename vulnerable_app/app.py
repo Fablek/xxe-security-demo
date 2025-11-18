@@ -96,14 +96,14 @@ def index():
     <head>
         <title>XXE Vulnerable App - XML Parser</title>
         <style>
-            body {
+             body {
                 font-family: Arial, sans-serif;
                 max-width: 900px;
                 margin: 50px auto;
                 padding: 20px;
                 background-color: #f5f5f5;
             }
-            .container {
+             .container {
                 background: white;
                 padding: 30px;
                 border-radius: 8px;
@@ -118,6 +118,31 @@ def index():
                 padding: 15px;
                 margin: 20px 0;
             }
+            .tabs {
+                display: flex;
+                gap: 10px;
+                margin: 20px 0;
+            }
+            .tab {
+                padding: 10px 20px;
+                background-color: #e0e0e0;
+                border: none;
+                cursor: pointer;
+                border-radius: 4px 4px 0 0;
+            }
+            .tab.active {
+                background-color: #d32f2f;
+                color: white;
+            }
+            .tab-content {
+                display: none;
+                padding: 20px;
+                border: 1px solid #ddd;
+                border-radius: 0 4px 4px 4px;
+            }
+            .tab-content.active {
+                display: block;
+            }
             textarea {
                 width: 100%;
                 min-height: 200px;
@@ -125,6 +150,19 @@ def index():
                 padding: 10px;
                 border: 1px solid #ddd;
                 border-radius: 4px;
+                box-sizing: border-box;
+            }
+            .file-input-wrapper {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                margin: 20px 0;
+            }
+            input[type="file"] {
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                flex: 1;
             }
             button {
                 background-color: #d32f2f;
@@ -134,17 +172,9 @@ def index():
                 border-radius: 4px;
                 cursor: pointer;
                 font-size: 16px;
-                margin-top: 10px;
             }
             button:hover {
                 background-color: #b71c1c;
-            }
-            .result {
-                margin-top: 20px;
-                padding: 15px;
-                background-color: #f9f9f9;
-                border-radius: 4px;
-                border: 1px solid #ddd;
             }
             pre {
                 background-color: #272822;
@@ -154,6 +184,21 @@ def index():
                 overflow-x: auto;
             }
         </style>
+        <script>
+            function switchTab(tabName) {
+                // Hide all tabs
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show selected tab
+                document.getElementById(tabName).classList.add('active');
+                document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            }
+        </script>
     </head>
     <body>
         <div class="container">
@@ -164,35 +209,62 @@ def index():
                 For educational purposes only. DO NOT deploy to production!
             </div>
             
-            <h2>Test XML Parser</h2>
-            <p>Enter XML content below to parse:</p>
+            <h2>Choose Input Method:</h2>
             
-            <form method="POST" action="/parse">
-                <textarea name="xml_content" placeholder="Enter XML here...">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('paste-tab')">Paste XML</button>
+                <button class="tab" onclick="switchTab('upload-tab')">Upload File</button>
+            </div>
+            
+            <!-- Tab 1: Paste XML -->
+            <div id="paste-tab" class="tab-content active">
+                <h3>📝 Paste XML Content</h3>
+                <form method="POST" action="/parse">
+                    <textarea name="xml_content" placeholder="Enter XML here...">
 <?xml version="1.0" encoding="UTF-8"?>
 <user>
     <name>John Doe</name>
     <email>john@example.com</email>
     <role>user</role>
 </user>
-                </textarea>
-                <br>
-                <button type="submit">Parse XML</button>
-            </form>
+                    </textarea>
+                    <br>
+                    <button type="submit">Parse XML</button>
+                </form>
+            </div>
+            
+            <!-- Tab 2: Upload File -->
+            <div id="upload-tab" class="tab-content">
+                <h3>📁 Upload XML File</h3>
+                <form method="POST" action="/upload" enctype="multipart/form-data">
+                    <div class="file-input-wrapper">
+                        <input type="file" name="xml_file" accept=".xml,text/xml" required>
+                        <button type="submit">Upload & Parse</button>
+                    </div>
+                </form>
+                <p><em>Accepted formats: .xml files</em></p>
+            </div>
             
             <h3>Example Payloads:</h3>
             <p><strong>Normal XML:</strong></p>
             <pre>&lt;?xml version="1.0"?&gt;
-            &lt;data&gt;
-                &lt;message&gt;Hello World&lt;/message&gt;
-            &lt;/data&gt;</pre>
+&lt;data&gt;
+    &lt;message&gt;Hello World&lt;/message&gt;
+&lt;/data&gt;</pre>
             
             <p><strong>XXE File Disclosure:</strong></p>
             <pre>&lt;?xml version="1.0"?&gt;
-            &lt;!DOCTYPE foo [
-              &lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt;
-            ]&gt;
-            &lt;data&gt;&amp;xxe;&lt;/data&gt;</pre>
+&lt;!DOCTYPE foo [
+  &lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt;
+]&gt;
+&lt;data&gt;&amp;xxe;&lt;/data&gt;</pre>
+            
+            <p><strong>XXE SSRF (Internal Request):</strong></p>
+            <pre>&lt;?xml version="1.0"?&gt;
+&lt;!DOCTYPE foo [
+  &lt;!ENTITY xxe SYSTEM "http://localhost:5000/health"&gt;
+]&gt;
+&lt;data&gt;&amp;xxe;&lt;/data&gt;</pre>
         </div>
     </body>
     </html>
@@ -355,6 +427,175 @@ def health():
         'warning': 'This application is intentionally vulnerable!'
     })
 
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    """
+    Handle XML file upload and parse it
+    """
+    # Check if file was uploaded
+    if 'xml_file' not in request.files:
+        return jsonify({
+            'success': False,
+            'error': 'No file uploaded'
+        }), 400
+
+    file = request.files['xml_file']
+
+    # Check if filename is empty
+    if file.filename == '':
+        return jsonify({
+            'success': False,
+            'error': 'No file selected'
+        }), 400
+
+    # Check if file has .xml extension
+    if not file.filename.endswith('.xml'):
+        return jsonify({
+            'success': False,
+            'error': 'Only .xml files are allowed'
+        }), 400
+
+    try:
+        # Read file content
+        xml_content = file.read().decode('utf-8')
+
+        # Save uploaded file (optional, for logging)
+        import datetime
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+        safe_filename = f"uploaded_{timestamp}_{file.filename}"
+        filepath = os.path.join(UPLOAD_FOLDER, safe_filename)
+
+        with open(filepath, 'w') as f:
+            f.write(xml_content)
+
+        # Parse XML (vulnerable!)
+        result = parse_xml_vulnerable(xml_content)
+
+        # Return result as HTML
+        if result['success']:
+            html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Parse Result</title>
+                <style>
+                    body {{
+                        font-family: Arial, sans-serif;
+                        max-width: 900px;
+                        margin: 50px auto;
+                        padding: 20px;
+                        background-color: #f5f5f5;
+                    }}
+                    .container {{
+                        background: white;
+                        padding: 30px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    }}
+                    .success {{
+                        background-color: #d4edda;
+                        border-left: 4px solid #28a745;
+                        padding: 15px;
+                        margin: 20px 0;
+                    }}
+                    .info {{
+                        background-color: #d1ecf1;
+                        border-left: 4px solid #17a2b8;
+                        padding: 15px;
+                        margin: 20px 0;
+                    }}
+                    pre {{
+                        background-color: #272822;
+                        color: #f8f8f2;
+                        padding: 15px;
+                        border-radius: 4px;
+                        overflow-x: auto;
+                        max-height: 500px;
+                    }}
+                    a {{
+                        color: #d32f2f;
+                        text-decoration: none;
+                    }}
+                    a:hover {{
+                        text-decoration: underline;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>✅ XML File Parsed Successfully</h1>
+                    
+                    <div class="info">
+                        <strong>Uploaded File:</strong> {file.filename}<br>
+                        <strong>Saved As:</strong> {safe_filename}
+                    </div>
+                    
+                    <div class="success">
+                        {result['message']}
+                    </div>
+                    
+                    <h2>Parsed Data:</h2>
+                    <pre>{result['parsed_data']}</pre>
+                    
+                    <p><a href="/">← Back to Parser</a></p>
+                </div>
+            </body>
+            </html>
+            """
+            return render_template_string(html)
+        else:
+            html = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Parse Error</title>
+                <style>
+                    body {{
+                        font-family: Arial, sans-serif;
+                        max-width: 900px;
+                        margin: 50px auto;
+                        padding: 20px;
+                        background-color: #f5f5f5;
+                    }}
+                    .container {{
+                        background: white;
+                        padding: 30px;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    }}
+                    .error {{
+                        background-color: #f8d7da;
+                        border-left: 4px solid #dc3545;
+                        padding: 15px;
+                        margin: 20px 0;
+                    }}
+                    a {{
+                        color: #d32f2f;
+                        text-decoration: none;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>❌ Parse Error</h1>
+                    
+                    <div class="error">
+                        <strong>File:</strong> {file.filename}<br>
+                        <strong>Error:</strong> {result.get('error', 'Unknown error')}
+                    </div>
+                    
+                    <p><a href="/">← Back to Parser</a></p>
+                </div>
+            </body>
+            </html>
+            """
+            return render_template_string(html), 400
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Error processing file: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     print("=" * 60)
