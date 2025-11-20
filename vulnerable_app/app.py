@@ -25,10 +25,12 @@ def parse_xml_vulnerable(xml_content):
     try:
         # Create parser with external entities ENABLED
         parser = etree.XMLParser(
-            resolve_entities=True,  # VULNERABLE: Enable external entities
-            no_network=False,  # VULNERABLE: Allow network access
+            resolve_entities=True,  # Enable external entities
+            no_network=False,  # Allow network access
             dtd_validation=False,
-            load_dtd=True  # VULNERABLE: Load DTD
+            load_dtd=True,  # Load DTD
+            remove_blank_text=False,
+            huge_tree=True  # Allow large XML (for DoS testing)
         )
 
         # Parse the XML
