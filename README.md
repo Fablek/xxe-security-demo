@@ -12,23 +12,6 @@
 
 ---
 
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Project Structure](#project-structure)
-- [Features](#features)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Usage Guide](#usage-guide)
-- [Security Comparison](#security-comparison)
-- [Real-World Examples](#real-world-examples)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [License](#license)
-- [Disclaimer](#disclaimer)
-
----
-
 ## 🔍 Overview
 
 This project demonstrates **XML External Entity (XXE)** vulnerabilities through:
