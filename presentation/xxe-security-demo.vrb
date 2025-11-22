@@ -1,0 +1,19 @@
+\frametitle{Secure Configuration}
+\textbf{SAFE - External entities disabled:}
+
+    \begin{verbatim}
+parser = etree.XMLParser(
+    resolve_entities=False,  # XXE prevented!
+    no_network=True,         # SSRF blocked
+    load_dtd=False,         # No expansion
+    huge_tree=False         # DoS protection
+)
+    \end{verbatim}
+
+    \begin{block}{Protection}
+        \begin{itemize}
+            \item External entities disabled
+            \item Network access blocked
+            \item DTD loading disabled
+        \end{itemize}
+    \end{block}

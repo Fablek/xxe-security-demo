@@ -1,0 +1,6 @@
+\beamer@sectionintoc {1}{Introduction}{3}{0}{1}
+\beamer@sectionintoc {2}{Understanding XXE}{4}{0}{2}
+\beamer@sectionintoc {3}{Demonstration}{8}{0}{3}
+\beamer@sectionintoc {4}{Real-World Impact}{14}{0}{4}
+\beamer@sectionintoc {5}{Secure Implementation}{17}{0}{5}
+\beamer@sectionintoc {6}{Results \& Conclusions}{23}{0}{6}

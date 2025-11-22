@@ -1,0 +1,586 @@
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND THEMES
+%----------------------------------------------------------------------------------------
+\documentclass[aspectratio=169,xcolor=dvipsnames]{beamer}
+\usetheme{Simple}
+
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{booktabs}
+
+%----------------------------------------------------------------------------------------
+%	TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\title[XXE Security Demo]{XML External Entity (XXE) Vulnerability}
+\subtitle{Demonstration, Exploitation \& Mitigation}
+
+\author[Wieczorek, Chwalczyk, Hedrzak, Pytka, Pacyniak]{
+    Karol Wieczorek \and 
+    Paweł Chwalczyk \and 
+    Jakub Hedrzak \and 
+    Sebastian Pytka \and 
+    Adrian Pacyniak
+}
+\institute[SUT]{
+    Department of Applied Mathematics\\
+    Silesian University of Technology
+    \vskip 3pt
+}
+\date{\today}
+
+%----------------------------------------------------------------------------------------
+%	PRESENTATION SLIDES
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+%------------------------------------------------
+% TITLE
+%------------------------------------------------
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+%------------------------------------------------
+% OVERVIEW
+%------------------------------------------------
+
+\begin{frame}{Overview}
+    \textbf{Presentation Structure:}
+    \begin{enumerate}
+        \item Introduction - Project overview and technologies
+        \item Understanding XXE - What it is and how it works
+        \item Demonstration - Live attacks and exploits
+        \item Real-World Impact - Facebook, Google, Microsoft incidents
+        \item Secure Implementation - How to prevent XXE
+        \item Results \& Conclusions - Key findings and takeaways
+    \end{enumerate}
+\end{frame}
+
+%------------------------------------------------
+\section{Introduction}
+%------------------------------------------------
+
+\begin{frame}{Project Overview}
+    \begin{block}{Educational Security Demonstration}
+        Comprehensive study of XML External Entity (XXE) vulnerabilities through practical implementation and testing
+    \end{block}
+    
+    \vspace{1em}
+    
+    \begin{columns}[c]
+        \column{.5\textwidth}
+        \textbf{Components:}
+        \begin{itemize}
+            \item Vulnerable web application
+            \item Secure implementation
+            \item Automated exploit tools
+            \item Comprehensive documentation
+        \end{itemize}
+        
+        \column{.5\textwidth}
+        \textbf{Technologies:}
+        \begin{itemize}
+            \item Python 3.8+ / Flask
+            \item lxml XML parser
+            \item Security testing tools
+            \item GitHub repository
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+%------------------------------------------------
+\section{Understanding XXE}
+%------------------------------------------------
+
+\begin{frame}{What is XXE?}
+    \begin{alertblock}{XML External Entity (XXE) Injection}
+        A web security vulnerability that allows attackers to interfere with XML data processing, enabling:
+    \end{alertblock}
+    
+    \vspace{1em}
+    
+    \begin{columns}[c]
+        \column{.33\textwidth}
+        \textbf{File Disclosure}
+        \begin{itemize}
+            \item Read local files
+            \item Access sensitive data
+            \item Retrieve credentials
+        \end{itemize}
+        
+        \column{.33\textwidth}
+        \textbf{SSRF}
+        \begin{itemize}
+            \item Internal requests
+            \item Port scanning
+            \item Network mapping
+        \end{itemize}
+        
+        \column{.33\textwidth}
+        \textbf{Denial of Service}
+        \begin{itemize}
+            \item Billion Laughs
+            \item Resource exhaustion
+            \item Server crash
+        \end{itemize}
+    \end{columns}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]{How XXE Works}
+    \begin{block}{XML External Entities}
+        XML allows defining custom entities that can reference external resources
+    \end{block}
+    
+    \vspace{0.5em}
+    
+    \textbf{Normal XML:}
+    \begin{verbatim}
+<?xml version="1.0"?>
+<user>
+  <name>John Doe</name>
+  <email>john@example.com</email>
+</user>
+    \end{verbatim}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]{XXE Payload Example}
+    \textbf{Malicious XXE Payload:}
+    \begin{verbatim}
+<?xml version="1.0"?>
+<!DOCTYPE foo [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<data>&xxe;</data>
+    \end{verbatim}
+    
+    \vspace{1em}
+    
+    \begin{alertblock}{Impact}
+        This payload reads the system's password file and returns it to the attacker
+    \end{alertblock}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{XXE Attack Flow}
+    \begin{enumerate}
+        \item \textbf{Attacker} sends malicious XML with external entity
+        \item \textbf{Application} parses XML with vulnerable parser
+        \item \textbf{Parser} resolves external entity reference
+        \item \textbf{Parser} reads file/makes request
+        \item \textbf{Application} returns data to attacker
+    \end{enumerate}
+    
+    \vspace{1em}
+    
+    \begin{alertblock}{Critical Requirement}
+        XML parser must have \texttt{resolve\_entities=True} (VULNERABLE configuration)
+    \end{alertblock}
+\end{frame}
+
+%------------------------------------------------
+\section{Demonstration}
+%------------------------------------------------
+
+\begin{frame}{Vulnerable Application}
+    \begin{figure}
+        \includegraphics[width=0.95\textwidth]{../docs/screenshots/01-vulnerable-homepage.png}
+        \caption{Intentionally vulnerable Flask application with XXE parser}
+    \end{figure}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Attack 1: File Disclosure - System Files}
+    \textbf{Target:} \texttt{/etc/passwd}
+    
+    \begin{figure}
+        \includegraphics[width=0.8\textwidth]{../docs/screenshots/03-xxe-file-disclosure-passwd.png}
+        \caption{Successful file disclosure: 9,344 bytes of system user data exposed}
+    \end{figure}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Attack 2: File Disclosure - Application Secrets}
+    \textbf{Target:} \texttt{sensitive\_data.txt}
+    
+    \begin{figure}
+        \includegraphics[width=0.8\textwidth]{../docs/screenshots/04-xxe-sensitive-data.png}
+        \caption{Critical breach: Database credentials, API keys, and internal IPs exposed (456 bytes)}
+    \end{figure}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Automated Exploitation}
+    \textbf{Python Exploit Script:} File Disclosure
+    
+    \begin{figure}
+        \includegraphics[width=0.9\textwidth]{../docs/screenshots/08-exploit-file-disclosure.png}
+        \caption{Automated exploit successfully retrieved /etc/passwd}
+    \end{figure}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Attack 3: SSRF - Port Scanning}
+    \textbf{Technique:} Server-Side Request Forgery via XXE
+    
+    \begin{figure}
+        \includegraphics[width=0.9\textwidth]{../docs/screenshots/09-exploit-ssrf-scan.png}
+        \caption{Port scanning through vulnerable XML parser}
+    \end{figure}
+    
+    \begin{alertblock}{Note}
+        Modern lxml has security features that limit SSRF effectiveness
+    \end{alertblock}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Attack 4: Denial of Service}
+    \textbf{Technique:} Billion Laughs / XML Bomb
+    
+    \begin{figure}
+        \includegraphics[width=0.9\textwidth]{../docs/screenshots/10-exploit-dos-blocked.png}
+        \caption{DoS attempt blocked by lxml's entity expansion limits}
+    \end{figure}
+\end{frame}
+
+%------------------------------------------------
+\section{Real-World Impact}
+%------------------------------------------------
+
+\begin{frame}{Real-World XXE Incidents}
+    \begin{block}{Facebook (2013) - \$33,500 Bug Bounty}
+        \begin{itemize}
+            \item XXE in OpenID authentication handler
+            \item File disclosure vulnerability
+            \item Escalated to Remote Code Execution
+            \item Researcher: Reginaldo Silva
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Google (2012)}
+        \begin{itemize}
+            \item XXE in AppEngine and Blogger
+            \item Read-only access to production servers
+            \item Same researcher as Facebook incident
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Real-World XXE Incidents (Continued)}
+    \begin{block}{Android Development Tools (2017) - "ParseDroid"}
+        \begin{itemize}
+            \item APKTool, Android Studio, Eclipse, IntelliJ IDEA affected
+            \item XXE in DocumentBuilderFactory XML parser
+            \item Source code theft, supply chain attacks possible
+            \item Discovered by Check Point Research
+        \end{itemize}
+    \end{block}
+    
+    \begin{block}{Microsoft SharePoint (CVE-2019-0604)}
+        \begin{itemize}
+            \item Critical RCE via XXE
+            \item Exploited by APT group Emissary Panda
+            \item Active exploitation for 9+ months after patch
+            \item CVSS Score: 9.8 (Critical)
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Impact Statistics}
+    \begin{table}
+        \begin{tabular}{l l l}
+            \toprule
+            \textbf{Company} & \textbf{Year} & \textbf{Impact} \\
+            \midrule
+            Facebook & 2013 & RCE, \$33.5k bounty \\
+            Google & 2012 & Server file access \\
+            Android Tools & 2017 & Millions of developers \\
+            SharePoint & 2019 & APT exploitation \\
+            \bottomrule
+        \end{tabular}
+        \caption{Notable XXE vulnerabilities in major platforms}
+    \end{table}
+    
+    \vspace{1em}
+    
+    \begin{alertblock}{Key Finding}
+        XXE vulnerabilities affect even the most security-conscious organizations
+    \end{alertblock}
+\end{frame}
+
+%------------------------------------------------
+\section{Secure Implementation}
+%------------------------------------------------
+
+\begin{frame}{Secure Application}
+    \begin{figure}
+        \includegraphics[width=0.95\textwidth]{../docs/screenshots/06-secure-homepage.png}
+        \caption{Secure implementation with XXE protection enabled}
+    \end{figure}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{XXE Attack Blocked}
+    \textbf{Same payload, different result:}
+    
+    \begin{figure}
+        \includegraphics[width=0.8\textwidth]{../docs/screenshots/07-secure-xxe-blocked.png}
+        \caption{External entity not resolved - attack prevented}
+    \end{figure}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]{Vulnerable Configuration}
+    \textbf{DANGEROUS - External entities enabled:}
+    
+    \begin{verbatim}
+parser = etree.XMLParser(
+    resolve_entities=True,   # XXE vulnerability!
+    no_network=False,        # SSRF possible
+    load_dtd=True,          # Entity expansion
+    huge_tree=True          # No DoS limits
+)
+    \end{verbatim}
+    
+    \begin{alertblock}{Problems}
+        \begin{itemize}
+            \item External entities processed
+            \item Network access allowed
+            \item DTD loading enabled
+        \end{itemize}
+    \end{alertblock}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}[fragile]{Secure Configuration}
+    \textbf{SAFE - External entities disabled:}
+    
+    \begin{verbatim}
+parser = etree.XMLParser(
+    resolve_entities=False,  # XXE prevented!
+    no_network=True,         # SSRF blocked
+    load_dtd=False,         # No expansion
+    huge_tree=False         # DoS protection
+)
+    \end{verbatim}
+    
+    \begin{block}{Protection}
+        \begin{itemize}
+            \item External entities disabled
+            \item Network access blocked
+            \item DTD loading disabled
+        \end{itemize}
+    \end{block}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Mitigation Best Practices}
+    \begin{enumerate}
+        \item \textbf{Disable External Entities}
+        \begin{itemize}
+            \item Primary defense: \texttt{resolve\_entities=False}
+            \item Prevents all XXE attacks
+        \end{itemize}
+        
+        \item \textbf{Block Network Access}
+        \begin{itemize}
+            \item \texttt{no\_network=True}
+            \item Prevents SSRF attacks
+        \end{itemize}
+        
+        \item \textbf{Disable DTD Loading}
+        \begin{itemize}
+            \item \texttt{load\_dtd=False}
+            \item Prevents entity expansion
+        \end{itemize}
+        
+        \item \textbf{Input Validation}
+        \begin{itemize}
+            \item Validate XML structure
+            \item Limit file size
+            \item Sanitize user input
+        \end{itemize}
+    \end{enumerate}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Defense in Depth}
+    \begin{columns}[c]
+        \column{.33\textwidth}
+        \textbf{Layer 1: Parser}
+        \begin{itemize}
+            \item Secure configuration
+            \item Disable entities
+            \item Block network
+        \end{itemize}
+        
+        \column{.33\textwidth}
+        \textbf{Layer 2: Input}
+        \begin{itemize}
+            \item Validate format
+            \item Size limits
+            \item Type checking
+        \end{itemize}
+        
+        \column{.33\textwidth}
+        \textbf{Layer 3: System}
+        \begin{itemize}
+            \item Least privilege
+            \item File permissions
+            \item Network isolation
+        \end{itemize}
+    \end{columns}
+    
+    \vspace{2em}
+    
+    \begin{block}{Key Principle}
+        Multiple security layers provide better protection than a single control
+    \end{block}
+\end{frame}
+
+%------------------------------------------------
+\section{Results \& Conclusions}
+%------------------------------------------------
+
+\begin{frame}{Testing Results Summary}
+    \begin{table}
+        \begin{tabular}{l c c l}
+            \toprule
+            \textbf{Attack Type} & \textbf{Vulnerable} & \textbf{Secure} & \textbf{Impact} \\
+            \midrule
+            File Disclosure & FAIL & PASS & Critical \\
+            Sensitive Data & FAIL & PASS & Critical \\
+            SSRF & PARTIAL & PASS & Medium \\
+            DoS & PASS & PASS & Low \\
+            \bottomrule
+        \end{tabular}
+        \caption{Security testing results comparison}
+    \end{table}
+    
+    \vspace{1em}
+    
+    \begin{block}{Key Finding}
+        Single configuration change (\texttt{resolve\_entities=False}) prevents critical XXE attacks
+    \end{block}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Project Deliverables}
+    \begin{columns}[c]
+        \column{.5\textwidth}
+        \textbf{Implemented:}
+        \begin{itemize}
+            \item Vulnerable Flask application
+            \item Secure Flask application
+            \item 3 Python exploit scripts
+            \item Comprehensive documentation
+            \item 10 demonstration screenshots
+            \item GitHub repository
+        \end{itemize}
+        
+        \column{.5\textwidth}
+        \textbf{Demonstrated:}
+        \begin{itemize}
+            \item File disclosure attacks
+            \item SSRF techniques
+            \item DoS attempts
+            \item Automated exploitation
+            \item Secure configuration
+            \item Real-world context
+        \end{itemize}
+    \end{columns}
+    
+    \vspace{1em}
+    
+    \begin{block}{Repository}
+        \url{https://github.com/Fablek/xxe-security-demo}
+    \end{block}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{Key Takeaways}
+    \begin{enumerate}
+        \item \textbf{XXE is Critical} - Can lead to complete system compromise
+        \item \textbf{Simple to Exploit} - Requires only XML input capability
+        \item \textbf{Affects Major Companies} - Facebook, Google, Microsoft all vulnerable
+        \item \textbf{Easy to Fix} - One configuration change prevents attacks
+        \item \textbf{Testing Essential} - Both manual and automated testing needed
+        \item \textbf{Defense in Depth} - Multiple security layers recommended
+    \end{enumerate}
+    
+    \vspace{1em}
+    
+    \begin{alertblock}{Critical Message}
+        Always review and secure XML parser configurations in production applications
+    \end{alertblock}
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}{References}
+    \footnotesize{
+        \begin{thebibliography}{99}
+            \bibitem{owasp} OWASP Foundation
+            \newblock XML External Entity (XXE) Processing
+            \newblock \url{https://owasp.org/www-community/vulnerabilities/XML_External_Entity_(XXE)_Processing}
+            
+            \bibitem{portswigger} PortSwigger
+            \newblock XML external entity (XXE) injection
+            \newblock \url{https://portswigger.net/web-security/xxe}
+            
+            \bibitem{facebook} Reginaldo Silva (2013)
+            \newblock How I found a Remote Code Execution bug affecting Facebook's servers
+            \newblock \url{https://www.ubercomp.com/posts/2014-01-16_facebook_remote_code_execution}
+            
+            \bibitem{checkpoint} Check Point Research (2017)
+            \newblock ParseDroid: Targeting The Android Development \& Research Community
+            \newblock \url{https://research.checkpoint.com/2017/parsedroid-targeting-android-development-research-community/}
+        \end{thebibliography}
+    }
+\end{frame}
+
+%------------------------------------------------
+
+\begin{frame}
+    \Huge{\centerline{Thank You}}
+    \vspace{1em}
+    \large{\centerline{Questions?}}
+    \vspace{2em}
+    \normalsize
+    \begin{center}
+        \textbf{Authors:}\\
+        Karol Wieczorek, Paweł Chwalczyk, Jakub Hedrzak,\\
+        Sebastian Pytka, Adrian Pacyniak\\
+        \vspace{0.5em}
+        GitHub: \url{https://github.com/Fablek/xxe-security-demo}\\
+        \vspace{0.5em}
+        \textit{Educational Project - Use Responsibly}
+    \end{center}
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+
+\end{document}
